@@ -1,0 +1,98 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pago Exitoso</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url("{% static 'hospital.jpg' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #2c3e50;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .navbar {
+            width: 100%;
+            background: #2c3e50;
+            padding: 15px 0;
+            text-align: center;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .navbar a:hover {
+            color: #000000;
+            font-size: 26px;
+            transition: all 0.3s ease;
+        }
+
+        .message-box {
+            width: 90%;
+            max-width: 600px;
+            background: #6d8ba8;
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .message-box h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .message-box p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        .message-box a {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #ffffff;
+            color: #2c3e50;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .message-box a:hover {
+            background-color: #e0d5c8;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>  
+
+    <div class="message-box">
+        <h1>¡Pago Realizado con Éxito!</h1>
+        <p>Gracias por tu compra.</p>
+            <p>
+            <a href="{% url 'inicio' %}">Volver a la tienda</a>
+        </p>
+        {% if request.session.last_order_id %}
+            <p>ID de tu pedido: {{ request.session.last_order_id }}</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>

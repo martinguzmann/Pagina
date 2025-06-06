@@ -1,0 +1,230 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - {{ producto.nombre }}</title>
+    <style>
+        body {
+        font-family: Arial, sans-serif;
+        background-image: url("{% static 'hospital.jpg' %}");
+        background-size: cover; 
+        background-position: center;
+        background-repeat: no-repeat;
+        color: #2c3e50;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+        .product-info {
+            background-color: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-width: 400px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            color: #212529; /* Texto oscuro */
+        }
+
+        h1, p {
+            background-color: #f8f9fa; 
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block; /* Para que el fondo solo ocupe el texto */
+        }
+        .product-info img { max-width: 100%; height: auto; margin-bottom: 10px; }
+        
+        #paypal-button-container { margin-top: 20px; max-width: 400px; }
+        .loading-spinner {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+            display: none; /* Oculto por defecto */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #messages { color: red; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>Página de Checkout</h1>
+
+    <div class="product-info">
+        <h2>{{ producto.nombre }}</h2>
+        {% if producto.imagen %}
+            <img src="{{ producto.imagen }}" alt="{{ producto.nombre }}">
+        {% endif %}
+        <p><strong>Descripción:</strong> {{ producto.descripcion }}</p>
+        <p><strong>Precio:</strong> ${{ producto.monto }} USD</p> {# Asumiendo USD por ahora #}
+    </div>
+
+    <p>Proceder al pago con PayPal:</p>
+
+    <!-- Contenedor para el botón de PayPal -->
+    <div id="paypal-button-container"></div>
+
+    <!-- Para mostrar mensajes de error o un spinner -->
+    <div id="loading-spinner" class="loading-spinner"></div>
+    <div id="messages"></div>
+
+
+    <!-- SDK de JavaScript de PayPal -->
+    <!-- Reemplaza TU_PAYPAL_CLIENT_ID con el client_id que pasas desde la vista -->
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=capture&disable-funding=credit,card"></script>
+    {# disable-funding: Opcional, para deshabilitar ciertas fuentes de pago como tarjetas directas si solo quieres el flujo de cuenta PayPal #}
+    {# enable-funding: Para habilitar opciones específicas como 'venmo' #}
+
+    <script>
+        // URLs pasadas desde la vista de Django
+        const PAYPAL_CREATE_ORDER_URL = "{{ paypal_create_order_url|escapejs }}"; // Usar escapejs por seguridad
+        const PAYPAL_CAPTURE_ORDER_URL = "{{ paypal_capture_order_url|escapejs }}";
+        const PAYMENT_SUCCESS_URL = "{{ payment_success_url|escapejs }}";
+        const PAYMENT_FAILED_URL = "{{ payment_failed_url|escapejs }}";
+        const PRODUCT_ID = "{{ product_id_for_js|escapejs }}"; // ID del producto para la URL de creación
+
+        const paypalButtonsComponent = paypal.Buttons({
+
+            // Lógica para crear la orden en el servidor
+            createOrder: function(data, actions) {
+                console.log("Creando orden para producto ID:", PRODUCT_ID);
+                document.getElementById('loading-spinner').style.display = 'block';
+                document.getElementById('messages').innerText = '';
+
+                // Llama a tu endpoint en el backend para crear la orden
+                return fetch(PAYPAL_CREATE_ORDER_URL, { // La URL ya incluye el product_id
+                    method: 'POST', // Cambiado a POST
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Django requiere un token CSRF para POSTs, pero lo eximimos en la vista.
+                        // Si no lo eximieras, necesitarías enviar el token CSRF:
+                        // 'X-CSRFToken': '{{ csrf_token }}' (si usas la etiqueta {% csrf_token %} en un form, sino lo obtienes de cookie)
+                    },
+                    // No necesitamos body si el product_id está en la URL.
+                    // Si enviaras datos en el body: body: JSON.stringify({ product_id: PRODUCT_ID })
+                })
+                .then(response => {
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || `Error del servidor: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(orderData => {
+                    if (orderData.orderID) {
+                        console.log("Orden creada:", orderData.orderID);
+                        return orderData.orderID;
+                    } else {
+                        throw new Error(orderData.error || "No se recibió orderID del servidor.");
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al crear orden:", err);
+                    document.getElementById('messages').innerText = 'Error al iniciar el pago: ' + err.message;
+                    // Puedes deshabilitar el botón o mostrar un mensaje más permanente aquí
+                    return null; // Indicar a PayPal SDK que la creación de orden falló
+                });
+            },
+
+            // Lógica para capturar el pago después de la aprobación del usuario
+            onApprove: function(data, actions) {
+                console.log("Orden aprobada por el usuario. OrderID:", data.orderID);
+                document.getElementById('loading-spinner').style.display = 'block';
+                document.getElementById('messages').innerText = 'Procesando pago...';
+
+                // Llama a tu endpoint en el backend para capturar la orden
+                return fetch(PAYPAL_CAPTURE_ORDER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 'X-CSRFToken': '{{ csrf_token }}' // Si es necesario
+                    },
+                    body: JSON.stringify({
+                        orderID: data.orderID // El orderID que PayPal te da después de la aprobación
+                    })
+                })
+                .then(response => {
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    if (!response.ok) {
+                         return response.json().then(err => {
+                            // Intenta obtener un mensaje de error más específico de PayPal
+                            let detailedError = "Error al procesar el pago.";
+                            if (err.details && err.details.paypal_response && err.details.paypal_response.details && err.details.paypal_response.details.length > 0) {
+                                detailedError = err.details.paypal_response.details[0].issue + ": " + err.details.paypal_response.details[0].description;
+                            } else if (err.error) {
+                                detailedError = err.error;
+                            }
+                            throw new Error(detailedError || `Error del servidor: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(captureData => {
+                    console.log("Pago capturado:", captureData);
+                    if (captureData.status === 'success' || (captureData.details && captureData.details.status === 'COMPLETED')) {
+                        // Pago exitoso
+                        // Aquí puedes hacer algo más antes de redirigir, como mostrar un mensaje breve
+                        alert('¡Pago completado con éxito!');
+                        // Redirige a la página de éxito
+                        window.location.href = PAYMENT_SUCCESS_URL;
+                    } else {
+                        // La captura no fue exitosa, incluso si la llamada al backend fue 200 OK
+                        throw new Error(captureData.error || captureData.message || "La captura del pago no fue exitosa.");
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al capturar el pago:", err);
+                    document.getElementById('messages').innerText = 'Error al procesar el pago: ' + err.message;
+                    // Opcionalmente, redirigir a la página de fallo
+                    // window.location.href = PAYMENT_FAILED_URL;
+                    // Mostrar el error y permitir al usuario intentarlo de nuevo o contactar soporte
+                });
+            },
+
+            // Manejo de errores del SDK de PayPal (ej. ventana emergente cerrada, problemas de red del lado del cliente)
+            onError: function(err) {
+                console.error("Error con el SDK de PayPal:", err);
+                document.getElementById('loading-spinner').style.display = 'none';
+                document.getElementById('messages').innerText = "Ocurrió un error con PayPal. Por favor, intenta de nuevo.";
+                // Aquí podrías redirigir a la página de fallo o mostrar un mensaje al usuario
+                // window.location.href = PAYMENT_FAILED_URL;
+            },
+
+            // Manejo si el usuario cancela el flujo de pago (ej. cierra la ventana de PayPal)
+            onCancel: function(data) {
+                console.log("Pago cancelado por el usuario. OrderID:", data.orderID);
+                document.getElementById('loading-spinner').style.display = 'none';
+                document.getElementById('messages').innerText = "Has cancelado el pago.";
+                // Aquí podrías redirigir a la página de fallo/cancelación
+                // window.location.href = PAYMENT_FAILED_URL;
+            }
+        });
+
+        // Renderizar los botones de PayPal
+        if (document.getElementById("paypal-button-container")){
+            paypalButtonsComponent.render('#paypal-button-container').catch(err => {
+                console.error("Error al renderizar botones de PayPal:", err);
+                document.getElementById('messages').innerText = "Error al cargar los botones de pago. Refresca la página o contacta soporte.";
+            });
+        } else {
+            console.error("Contenedor de botones de PayPal no encontrado.");
+            document.getElementById('messages').innerText = "Error: No se encontró el contenedor para los botones de pago.";
+        }
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,349 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asignación de Camas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url("{% static 'hospital.jpg' %}"); /* Asegúrate que la ruta sea correcta */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #2c3e50;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding-bottom: 50px;
+            box-sizing: border-box;
+        }
+        .navbar {
+            width: 100%;
+            background: #2c3e50;
+            padding: 15px 0;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+            align-items: center;
+            box-sizing: border-box;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            font-size: 22px;
+            margin: 0 15px;
+            font-weight: 500;
+            padding: 0 15px;
+            border-right: 2px solid white;
+            line-height: 1.2;
+        }
+        .navbar a:hover {
+            color: #000000;
+            font-size: 26px;
+            transition: all 0.3s ease; 
+        }
+
+        .navbar a:last-child {
+            border-right: none;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 40px;
+            padding: 0 20px;
+            width: 100%;
+            /* Aumentamos el max-width para acomodar el form más ancho y la status card */
+            max-width: 1100px;
+            box-sizing: border-box;
+        }
+
+        /* Contenedor específico para el formulario */
+        .form-container {
+             /* Quitamos max-width fijo, dejamos que flexbox maneje el ancho */
+             flex-grow: 1; /* Permite que crezca */
+             /* Añadimos un min-width para asegurar espacio para 2 columnas */
+             min-width: 550px;
+             flex-shrink: 0;
+             box-sizing: border-box;
+        }
+
+        /* --- ESTILOS PARA LA CAJA DEL FORMULARIO --- */
+        .form-card {
+            background: #3446A0;
+            color: white;
+            padding: 35px; /* Un poco más de padding */
+            border-radius: 10px;
+            box-sizing: border-box;
+            width: 100%;
+            /* No necesita flex direction column aquí, los elementos internos lo manejarán */
+        }
+        /* ----------------------------------------------- */
+
+         /* --- Contenedor para las columnas del formulario --- */
+        .form-columns {
+            display: flex;
+            gap: 30px; /* Espacio entre las columnas */
+            width: 100%;
+            margin-bottom: 25px; /* Espacio antes del botón */
+        }
+
+        /* --- Estilo para cada columna --- */
+        .form-column {
+            flex: 1; /* Cada columna toma la mitad del espacio */
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Espacio entre los campos dentro de una columna */
+        }
+        /* --- FIN Estilos Columnas --- */
+
+        /* --- ESTILOS PARA LA TARJETA DE ESTADO --- */
+        .status-card {
+            max-width: 300px;
+            min-width: 250px; /* Ancho mínimo */
+            flex-shrink: 0;
+            background: #3446A0;
+            color: white;
+            padding: 40px 30px; /* Ajustar padding */
+            border-radius: 10px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Alinear contenido arriba */
+            box-sizing: border-box;
+            align-self: flex-start;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 25px; /* Más espacio */
+        }
+        .status-item:last-child { margin-bottom: 0; }
+        .status-item p { margin-bottom: 10px; font-size: 1.1em; }
+        .status-number {
+            background: white;
+            color: #3446A0;
+            border-radius: 50%;
+            padding: 5px;
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        /* --- FIN ESTILOS TARJETA ESTADO --- */
+
+        /* --- ESTILOS PARA ELEMENTOS DENTRO DEL FORM-CARD --- */
+        .form-card h2 {
+             width: 100%; /* Ocupa todo el ancho disponible */
+             text-align: center;
+             margin-bottom: 25px; /* Espacio debajo del título */
+        }
+
+        .form-card .form-group {
+            margin-bottom: 0; /* Controlado por gap de .form-column */
+            text-align: left;
+            width: 100%; /* Ocupa el ancho de su columna */
+            display: flex;
+            flex-direction: column;
+            gap: 6px; /* Espacio entre label e input */
+        }
+        .form-card label {
+             font-size: 1.1em;
+             font-weight: bold;
+             line-height: 1.3; /* Para buena legibilidad */
+             /* Ya no necesitamos dividirlo con <br> */
+        }
+
+        .form-card input[type="text"],
+        .form-card input[type="email"],
+        .form-card input[type="tel"],
+        .form-card input[type="date"],
+        .form-card select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #2c3e50;
+            color-scheme: light;
+        }
+        .form-card input[type="date"]:invalid { color: #6c757d; }
+        .form-card input[type="date"]:valid { color: #2c3e50; }
+
+        /* Botón principal */
+        .form-card .btn {
+            display: block;
+            background: #4EF0B6;
+            color: #2c3e50;
+            border: none;
+            padding: 14px 25px; /* Ligeramente más grande */
+            font-size: 1.15em; /* Ligeramente más grande */
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            /* Lo hacemos ocupar todo el ancho del form-card */
+            width: 100%;
+            max-width: 400px; /* Opcional: un ancho máximo para el botón */
+            margin: 0 auto;   /* Centrar si tiene max-width */
+            box-sizing: border-box;
+            transition: background-color 0.3s;
+        }
+         .form-card .btn:hover { background: #3adca2; }
+
+         /* Estilos para mensajes de Django */
+        .messages {
+            list-style: none;
+            padding: 10px;
+            margin: 0 0 20px 0; /* Espacio debajo */
+            border-radius: 5px;
+            width: 100%; /* Ocupar ancho */
+            box-sizing: border-box;
+        }
+        /* ... (resto de estilos de mensajes igual que antes) ... */
+         .messages li { padding: 8px; margin-bottom: 5px; border-radius: 3px; }
+         .messages li.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+         .messages li.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+         .messages li.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+         .messages li.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+         /* --- FIN ESTILOS DENTRO FORM-CARD --- */
+
+         /* --- Media Query para Responsividad --- */
+         @media (max-width: 900px) { /* Punto de quiebre donde el form podría necesitar apilarse */
+             .form-container {
+                 min-width: 0; /* Resetear min-width */
+                 width: 100%; /* Ocupar todo el ancho disponible */
+                 max-width: 600px; /* Un ancho máximo razonable */
+                 margin: 0 auto; /* Centrar el contenedor del formulario */
+             }
+             .form-columns {
+                 flex-direction: column; /* Apilar columnas */
+                 gap: 0; /* Sin gap horizontal */
+                 margin-bottom: 20px;
+             }
+             .form-column {
+                 gap: 15px; /* Gap entre elementos vertical */
+                 /* Añadir espacio debajo de la primera columna si se apilan */
+                 margin-bottom: 15px;
+             }
+             .form-column:last-child {
+                 margin-bottom: 0;
+             }
+             .container {
+                 /* El flex-wrap ya hará que la status card baje si no cabe */
+                 max-width: 95%; /* Usar casi todo el ancho */
+                 justify-content: center; /* Centrar items cuando se envuelven */
+             }
+             .status-card {
+                margin-top: 30px; 
+                width: 100%;
+                max-width: 600px; 
+             }
+         }
+
+
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="{% url 'inicio' %}">Inicio</a>
+        <a href="#">Reporte</a>
+        <a href="{% url 'buscarpac' %}">Resumen paciente</a>
+        <a href="#">Configuración</a>
+    </div>
+
+    <div class="container">
+
+        <div class="form-container">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-card">
+                    <h2>Editar Paciente</h2>
+            
+                    {% if messages %}
+                        <ul class="messages">
+                            {% for message in messages %}
+                                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+            
+                    <div class="form-columns">
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label for="nombre_pac">Nombre paciente</label>
+                                <input type="text" id="nombre_pac" name="nombre_pac" value="{{ paciente.nombre_pac }}" required>
+                            </div>
+            
+                            <div class="form-group">
+                                <label for="apellido_pac">Apellido</label>
+                                <input type="text" id="apellido_pac" name="apellido_pac" value="{{ paciente.apellido_pac }}" required>
+                            </div>
+            
+                            <div class="form-group">
+                                <label for="rut">RUT</label>
+                                <input type="text" id="rut" name="rut" value="{{ paciente.rut }}" required>
+                            </div>
+            
+                            <div class="form-group">
+                                <label for="email">Correo electrónico</label>
+                                <input type="email" id="email" name="email" value="{{ paciente.email }}" required>
+                            </div>
+                        </div>
+            
+                        <div class="form-column">
+                            <div class="form-group">
+                                <label for="fecha_nacimiento">Fecha de nacimiento</label>
+                                <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" value="{{ paciente.fecha_nacimiento|date:'Y-m-d' }}" required>
+                            </div>
+            
+                            <div class="form-group">
+                                <label for="sexo">Sexo</label>
+                                <select id="sexo" name="sexo" required>
+                                    <option value="Masculino" {% if paciente.sexo == 'Masculino' %}selected{% endif %}>Masculino</option>
+                                    <option value="Femenino" {% if paciente.sexo == 'Femenino' %}selected{% endif %}>Femenino</option>
+                                    <option value="Otro" {% if paciente.sexo == 'Otro' %}selected{% endif %}>Otro</option>
+                                </select>
+                            </div>
+            
+                            <div class="form-group">
+                                <label for="motivo_consulta">Motivo del ingreso</label>
+                                <input type="text" id="motivo_consulta" name="motivo_consulta" value="{{ paciente.motivo_consulta }}" required>
+                            </div>
+            
+                            <div class="form-group">
+                                <label for="telefono">Teléfono</label>
+                                <input type="tel" id="telefono" name="telefono" value="{{ paciente.telefono }}" pattern="[0-9]{9,12}" title="El teléfono debe contener entre 9 y 12 dígitos" required>
+                            </div>
+                        </div>
+                    </div>
+            
+                    <button type="submit" class="btn">Guardar Cambios</button>
+                </div>
+            </form>
+        </div> 
+    </div> 
+</body>
+</html>

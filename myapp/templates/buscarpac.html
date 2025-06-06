@@ -1,0 +1,219 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Búsqueda de Pacientes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url("{% static 'hospital.jpg' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #2c3e50;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .navbar {
+            width: 100%;
+            background: #2c3e50;
+            padding: 15px 0;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            font-size: 24px;
+            margin: 0 15px;
+            font-weight: bold;
+            padding: 0 15px;
+            border-right: 2px solid white;
+        }
+        .navbar a:hover {
+            color: #000000;
+            font-size: 26px;
+            transition: all 0.3s ease; 
+        }
+
+        .navbar a:last-child {
+            border-right: none;
+        }
+        .container {
+            display: flex;
+            gap: 50px;
+            margin-top: 30px;
+        }
+        .search-panel {
+            background: #f8f1e4;
+            padding: 30px;
+            border-radius: 10px;
+            width: 250px;
+            text-align: center;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+        .search-panel input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .search-panel button {
+            background: #0071c5;
+            color: white;
+            padding: 10px;
+            border: none;
+            width: 100%;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .table-container {
+            background: rgba(248, 241, 228, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            flex: 3 1 auto; /* Mantenemos flex para distribución inicial, permitiendo encoger (shrink=1) */
+            min-width: 400px; /* Aún importante para que no colapse demasiado */
+            width: fit-content; /* <<<--- LA CLAVE: Ajusta el ancho al contenido */
+            max-width: 100%; /* Evita que exceda el 100% del contenedor padre si es posible, aunque fit-content puede prevalecer */
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+            /* overflow-x: auto; <- Mantenemos esto quitado */
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #2c3e50;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background: #3446A0;
+            color: white;
+        }
+        .logo {
+            margin-top: 20px;
+            width: 200px;
+        }
+
+        .action-icon {
+            font-size: 1.5em; /* Tamaño del icono */
+            padding: 0 5px; /* Espacio ligero alrededor */
+            vertical-align: middle;
+            line-height: 1; /* Evitar espacio extra vertical */
+            display: inline-block; 
+            cursor: pointer
+        }
+        .action-icon.unassign {
+            color: #dc3545; /* Rojo */
+        }
+        .action-icon.assign {
+            color: #05501e; /* Verde */
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="{% url 'inicio' %}">Inicio</a>
+        <a href="#">Reporte</a>
+        <a href="{% url 'buscarpac' %}">Resumen paciente</a>
+        <a href="#">Configuración</a>
+    </div>
+    
+    <div class="container">
+        <div class="search-panel">
+            <h3>Búsqueda del paciente</h3>
+            <form method="POST">
+            {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="rut">RUT</label>
+                    <input type="text" id="rut" name="rut" value="{{ form_data.rut|default:'' }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="nombre_pac">Nombre paciente</label> {# Label normal #}
+                    <input type="text" id="nombre_pac" name="nombre_pac" value="{{ form_data.nombre_pac|default:'' }}"
+                    pattern="[A-Za-zÀ-ÿ\s]+" title="Solo letras y espacios">
+                </div>
+                <div>
+                    <button type="submit">Buscar</button>
+                </div>  
+                <div>
+                    <button style="margin-top: 10px;" type="submit" formaction="{% url 'buscarpac' %}">Refrescar</button>
+                </div>
+                </form>
+
+        </div>
+        <div class="table-container">
+            <h2>Resultado búsqueda</h2>
+            <table>
+                <tr>
+                    <th>Run</th>
+                    <th>Nombre</th>
+                    <th>Diagnóstico</th>
+                    <th>Fecha de admisión</th>
+                    <th>Num Camilla</th>
+                    <th>Modifcar camilla</th>
+                </tr>
+                {% for paciente in pacientes %}
+                <tr>
+                    <td>{{ paciente.rut }}</td>
+                    <td>{{ paciente.nombre_pac }}</td>
+                    <td>{{ paciente.motivo_consulta }}</td>
+                    <td>{{ paciente.fecha_registro }}</td>
+                    <td>{% if paciente.id_camilla_id == None %}
+                        <span >No asignada</span>
+                        {% else %}
+                            <span>{{ paciente.id_camilla_id }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if paciente.id_camilla_id %}
+                        <!-- Mostrar icono X (Círculo Rojo) si hay cama asignada -->
+                        <form method="POST" action="{% url 'liberar_camilla' paciente.id_paciente %}">
+                            {% csrf_token %}
+                            <button style="border: none; background: none; cursor: pointer;"
+                                    class="action-icon unassign" title="Desasignar Camilla">
+                                <i class="fas fa-circle-xmark"></i>
+                            </button>
+                        </form>
+                    {% else %}
+                        <!-- Mostrar icono + (Círculo Verde) si NO hay cama asignada -->
+                        <form method="POST" action="{% url 'asignar_camilla' paciente.id_paciente %}">
+                            {% csrf_token %}
+                            <button style="border: none; background: none; cursor: pointer;"
+                                    class="action-icon assign" title="Asignar Camilla">
+                                <i class="fas fa-circle-plus"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No se encontraron pacientes con los criterios de búsqueda.</td>
+                </tr>
+                {% endfor %}  
+            </table>
+        </div>
+    </div>
+
+    <img src="{% static 'InterSystems_logo.png' %}" alt="InterSystems Logo" class="logo">
+</body>
+</html>
